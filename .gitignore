@@ -1,0 +1,25 @@
+# Build output
+target/
+build/
+*.class
+
+# Maven wrapper jar is downloaded from maven-wrapper.properties; keep the rest of .mvn
+!.mvn/wrapper/maven-wrapper.properties
+
+# IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/*
+!.vscode/settings.json
+.settings/
+.project
+.classpath
+bin/
+
+# OS / logs / env
+.DS_Store
+Thumbs.db
+*.log
+.env

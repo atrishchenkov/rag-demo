@@ -1,0 +1,4 @@
+{
+  "//": "Eclipse JDT optional null-analysis produces false positives against Spring's @NonNullApi packages. Authoritative static analysis runs in the build (javac -Xlint:all -Werror + SpotBugs), so this editor-only mode is disabled to keep the Problems panel signal-rich.",
+  "java.compile.nullAnalysis.mode": "disabled"
+}

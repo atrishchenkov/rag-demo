@@ -1,0 +1,70 @@
+name: rag-demo
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: rag
+      POSTGRES_USER: rag
+      POSTGRES_PASSWORD: rag
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag -d rag"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  app:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # 'dev' profile opens the API so the whole stack is testable without tokens.
+      # Drop it to run secured against the bundled Keycloak (get a token — see README).
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/rag
+      SPRING_DATASOURCE_USERNAME: rag
+      SPRING_DATASOURCE_PASSWORD: rag
+      OAUTH2_JWK_SET_URI: http://keycloak:8080/realms/rag/protocol/openid-connect/certs
+      # Real answers need a real key; a dummy lets the app boot (/chat then degrades gracefully).
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-dummy}
+    ports:
+      - "8080:8080"
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./observability/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    volumes:
+      - ./observability/keycloak-realm.json:/opt/keycloak/data/import/realm.json:ro
+    ports:
+      - "8081:8080"
+
+volumes:
+  pgdata:

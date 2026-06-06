@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    name: Unit + integration + SpotBugs
+    runs-on: ubuntu-latest   # Docker preinstalled — Testcontainers runs the full pgvector path
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build, test, static analysis
+        run: mvn -B verify
+
+  e2e:
+    name: End-to-end (full stack)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Start the full stack
+        run: docker compose up -d --build
+
+      - name: Wait for the app to be healthy
+        run: |
+          for _ in $(seq 1 40); do
+            curl -sf http://localhost:8080/actuator/health && exit 0
+            sleep 5
+          done
+          echo "App did not become healthy" && exit 1
+
+      - name: Run E2E acceptance tests
+        run: mvn -B -Pe2e test-compile failsafe:integration-test failsafe:verify -De2e.baseUrl=http://localhost:8080
+
+      - name: Stack logs (on failure)
+        if: failure()
+        run: docker compose logs --tail=150
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

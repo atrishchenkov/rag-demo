@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- DTOs are immutable JSON data carriers (Jackson-populated, never mutated). Defensive-copying
+         their List/Map components adds ceremony for no real benefit, so EI_EXPOSE_REP is not applicable. -->
+    <Match>
+        <Package name="dev.trishchenkov.ragdemo.dto"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+</FindBugsFilter>

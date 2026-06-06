@@ -1,0 +1,38 @@
+replicaCount: 2
+
+image:
+  repository: rag-demo
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+# Non-secret configuration (rendered into a ConfigMap).
+config:
+  datasourceUrl: jdbc:postgresql://postgres:5432/rag
+  datasourceUsername: rag
+  llmProvider: anthropic          # spring.ai.model.chat → anthropic | openai
+
+# Secrets (rendered into a Secret). DO NOT commit real keys — supply at install time:
+#   helm install rag ./helm/rag-demo --set secrets.anthropicApiKey=sk-ant-...
+# or reference an externally-managed Secret instead.
+secrets:
+  datasourcePassword: rag
+  anthropicApiKey: ""
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 768Mi
+  limits:
+    cpu: "1"
+    memory: 1536Mi
+
+# Liveness/readiness use the Spring Boot Actuator probes enabled in application.yml.
+probes:
+  liveness:
+    path: /actuator/health/liveness
+  readiness:
+    path: /actuator/health/readiness

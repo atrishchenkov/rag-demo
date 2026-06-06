@@ -1,0 +1,27 @@
+{
+  "realm": "rag",
+  "enabled": true,
+  "sslRequired": "none",
+  "clients": [
+    {
+      "clientId": "rag-client",
+      "enabled": true,
+      "secret": "rag-secret",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true
+    }
+  ],
+  "users": [
+    {
+      "username": "demo",
+      "enabled": true,
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        { "type": "password", "value": "demo", "temporary": false }
+      ]
+    }
+  ]
+}

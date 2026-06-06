@@ -1,0 +1,75 @@
+spring:
+  application:
+    name: rag-demo
+  datasource:
+    url: jdbc:postgresql://localhost:5432/rag
+    username: rag
+    password: rag
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # JWKS endpoint of your IdP (e.g. Keycloak). Decoder is lazy — the app starts
+          # without the IdP reachable; tokens are validated against it on first use.
+          jwk-set-uri: ${OAUTH2_JWK_SET_URI:http://localhost:8081/realms/rag/protocol/openid-connect/certs}
+  ai:
+    # Provider selection (both anthropic + openai starters are on the classpath).
+    # Switch LLM with one line — no code change. Embedding stays local (transformers).
+    model:
+      chat: anthropic        # or: openai
+      embedding: transformers
+      # This app only uses chat + embedding; disable the other OpenAI model autoconfigs.
+      image: none
+      moderation: none
+      audio:
+        speech: none
+        transcription: none
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      chat:
+        options:
+          # claude-sonnet-4-6 (balanced). Cheaper: claude-haiku-4-5. Best: claude-opus-4-8.
+          model: claude-sonnet-4-6
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: gpt-4o-mini
+    retry:
+      max-attempts: 3            # retry transient LLM failures (429 / 5xx) with backoff
+      backoff:
+        initial-interval: 1s
+        multiplier: 2
+        max-interval: 10s
+    vectorstore:
+      pgvector:
+        initialize-schema: true
+        dimensions: 384          # all-MiniLM-L6-v2 embedding size
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+
+rag:
+  top-k: 4                       # number of chunks retrieved per question
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true            # /actuator/health/liveness & /readiness for Kubernetes
+  tracing:
+    sampling:
+      probability: 1.0           # sample every request (demo); lower in production
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      llm:                       # guards the external LLM call (see RagService#answer)
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+
