@@ -35,7 +35,8 @@ check_body() {
 }
 
 echo "Waiting for app to become healthy at $APP ..."
-for _ in $(seq 1 40); do
+# A cold container downloads the ONNX embedding model at startup (~2.5 min), so allow generously.
+for _ in $(seq 1 70); do
   curl -sf "$APP/actuator/health" >/dev/null 2>&1 && break
   sleep 3
 done

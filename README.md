@@ -146,6 +146,8 @@ curl -X DELETE "localhost:8080/documents?filter=category == '\''docs'\''"
 
 Stateless **OAuth2 Resource Server** — every API call requires a valid JWT, validated against your IdP's JWKS (`OAUTH2_JWK_SET_URI`). `/actuator/**` stays open for probes and scraping. The `dev` profile swaps in an open chain for local experimentation; the default profile is secured.
 
+**SSRF guard** — `POST /documents/url` fetches a remote document, so the URL is validated first: only `http`/`https`, and the resolved host must not be loopback, private, link-local, or any-local. This stops a caller (or a crafted document pipeline) from using ingestion to reach internal services or the cloud metadata endpoint.
+
 ### Resilience
 
 - **Circuit breaker** (Resilience4j) around the external LLM call — when the model provider is failing or slow, the breaker opens and `RagService` returns a graceful fallback instead of cascading failures.
@@ -162,7 +164,7 @@ Stateless **OAuth2 Resource Server** — every API call requires a valid JWT, va
 ### Containerization & Kubernetes
 
 - **Full local stack** — `compose.yaml` runs app + pgvector + Prometheus + Grafana + Keycloak together (`docker compose up -d --build`), so metrics, dashboards and the IdP are all live with one command.
-- **Multi-stage `Dockerfile`** → slim JRE runtime image.
+- **Multi-stage `Dockerfile`** → layered Spring Boot jar on a slim JRE, running as a **non-root** user.
 - **Helm chart** (`helm/rag-demo`) — Deployment + Service, liveness/readiness probes wired to the Actuator endpoints, Prometheus scrape annotations, ConfigMap/Secret split (no secrets in the image), and resource requests/limits.
 
 ```bash
